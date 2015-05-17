@@ -1,17 +1,10 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 
 ## Loading and preprocessing the data
 
-```{r}
 
-
-
+```r
 ## What is mean total number of steps taken per day?
 
 
@@ -25,3 +18,4 @@ output:
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+```
