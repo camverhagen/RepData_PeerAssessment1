@@ -6,22 +6,183 @@ output:
 ---
 
 
-## Loading and preprocessing the data
+## Loading and preprocessing the data  
 
 ```{r}
+library(dplyr)
+ActivityData <- tbl_df(read.csv("activity.csv", colClasses = c("integer", "Date", "integer")))
+head(ActivityData)
+```
+  
+### Remove NA observations   
+
+```{r}
+CleanActivityData <- na.omit(ActivityData)
+head(CleanActivityData)
+```
 
 
+## What is the mean total number of steps taken per day?
 
-## What is mean total number of steps taken per day?
+### Histogram of the total number of steps taken each day
 
+Calculate total number of steps per day  
+```{r}
+dailysteps <- CleanActivityData %>%
+    select(date, steps) %>%
+    group_by(date) %>%
+    summarise_each(funs(sum))
+```
+
+Plot the total number of steps per day  
+```{r}
+library(ggplot2)
+ggplot(CleanActivityData, aes(date, steps)) + 
+    geom_bar(stat = "identity", width = 0.7) + 
+    labs(title = "Histogram of Total Number of Steps Taken Each Day", 
+         x = "Date", 
+         y = "Total number of steps")
+```
+
+Mean total number of steps taken per day  
+```{r}
+Mean1 <- mean(dailysteps$steps, na.rm=TRUE)
+Mean1
+```
+Median total number of steps taken per day  
+```{r}
+Median1 <- median(dailysteps$steps, na.rm=TRUE)
+Median1
+```
 
 
 ## What is the average daily activity pattern?
 
+### Time Series plot of the 5-minute interval and the average number of steps taken
+Calculate 5-minute interval average  
+```{r}
+IntervalAvg <- CleanActivityData %>%
+    select(interval, steps) %>%
+    group_by(interval) %>%
+    summarise_each(funs(mean))
+```
+
+Plot the data  
+```{r}
+plot(IntervalAvg$interval, IntervalAvg$steps,
+     main = "Average Steps in 5-Minute Interval",
+     xlab = "Interval",
+     ylab = "Average Steps",
+     type="l")
+```
+
+### The 5-minute interval containing the maximum number of steps on average
+```{r}
+MaxDailyAvg <- max(IntervalAvg$steps)
+IntervalAvg[IntervalAvg$steps==MaxDailyAvg,]
+```
 
 
-## Imputing missing values
+## Imputing missing values  
 
+### Total number of missing values  
+```{r}
+sum(is.na(ActivityData$steps))
+```
+
+### Imputing missing step values with the 5-minute interval average  
+```{r}
+ActivityData.imp <- ActivityData
+for (i in 1:nrow(ActivityData.imp)) {
+    if(is.na(ActivityData$steps[i])) {
+        ActivityData.imp$steps[i] <- IntervalAvg[ActivityData.imp$interval[i] == IntervalAvg$interval, ]$steps
+    }
+}
+```
+
+### New Dataset  
+```{r}
+head(ActivityData.imp)
+```
+
+### Histogram of total number of steps taken each day using new dataset  
+```{r}
+ggplot(ActivityData.imp, aes(date, steps)) +
+    geom_bar(stat = "identity",
+            width = 0.7) +
+    labs(title = "Histogram of Total Number of Daily Steps Using Imputed Values For Missing Data",
+         x = "Date",
+         y= "Total Number of Steps")
+```
+
+### Calculate total number of steps per day using new dataset  
+```{r}
+dailysteps.imp <- ActivityData.imp %>%
+    select(date, steps) %>%
+    group_by(date) %>%
+    summarise_each(funs(sum))
+```
+
+### Mean total number of steps using new dataset  
+```{r}
+Mean2 <- mean(dailysteps.imp$steps, na.rm=TRUE)
+Mean2
+```
+
+### Median total number of steps using new dataset
+```{r}
+Median2 <- median(dailysteps.imp$steps, na.rm=TRUE)
+Median2
+```
+
+### Comparison of Means after imputing missing values  
+```{r}
+MeanDiff <- Mean2 - Mean1
+MeanDiff
+```
+The calculation of mean did not experience any change  
+because I used the mean of the 5-minute interval to impute  
+the missing step values.
+
+### Comparison of Medians after imputing missing values  
+```{r}
+MedianDiff <- Median2 - Median1
+MedianDiff
+```
+The calculation of median has drawn closer to the calculation  
+of the mean value because I used the mean of the 5-minute  
+interval to impute the missing step values.  
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+### Creation of new factor variable "weekday"  
+```{r}
+library(lubridate)
+ActivityData.imp$weekday <- wday(ActivityData.imp$date, label=TRUE)
+levels(ActivityData.imp$weekday) <- list(weekday = c("Mon","Tues","Wed","Thurs","Fri"),
+                                         weekend = c("Sat","Sun"))
+
+levels(ActivityData.imp$weekday)
+head(ActivityData.imp)
+```
+
+### Panel plot of 5-minute interval and average number of steps taken  
+Calculate 5-minute interval average  
+```{r}
+IntervalAvg.imp <- ActivityData.imp %>%
+    select(weekday,interval, steps) %>%
+    group_by(weekday, interval) %>%
+    summarise_each(funs(mean))
+head(IntervalAvg.imp)
+```
+
+Plot the data  
+```{r}
+ggplot(IntervalAvg.imp, aes(interval, steps)) +
+    geom_line(stat = "identity", colour="blue") + 
+    facet_grid(weekday~.) + 
+    labs(title="Panel Plot of Average Steps Taken per Interval",
+         x = "Interval",
+         y= "Avg Steps")
+```
